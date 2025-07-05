@@ -11,7 +11,17 @@ console.log('Gemini API Key:', process.env.GEMINI_API_KEY ? 'Set' : 'Not Set');
 const app = express();
 const port = process.env.PORT || 3000;
 
-const db = new sqlite3.Database('./db/companies.db');
+// SQLite 데이터베이스 연결 (안전한 방식)
+const dbPath = path.join(__dirname, 'db', 'companies.db');
+console.log('Database path:', dbPath);
+
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('Database connection error:', err.message);
+        process.exit(1);
+    }
+    console.log('Connected to SQLite database');
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -232,6 +242,19 @@ app.get('/api/analyze-financial-statements', async (req, res) => {
             message: 'Financial analysis error occurred.' 
         });
     }
+});
+
+// 프로세스 종료 시 데이터베이스 연결 정리
+process.on('SIGINT', () => {
+    console.log('Closing database connection...');
+    db.close((err) => {
+        if (err) {
+            console.error('Error closing database:', err.message);
+        } else {
+            console.log('Database connection closed.');
+        }
+        process.exit(0);
+    });
 });
 
 app.listen(port, '0.0.0.0', () => {

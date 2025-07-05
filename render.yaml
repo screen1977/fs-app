@@ -2,8 +2,11 @@ services:
   - type: web
     name: financial-statement-analyzer
     env: node
-    buildCommand: npm install
+    runtime: node
+    buildCommand: npm install --production && npm rebuild sqlite3
     startCommand: npm start
     envVars:
       - key: NODE_ENV
-        value: production 
+        value: production
+      - key: NODE_VERSION
+        value: 18.18.0 
