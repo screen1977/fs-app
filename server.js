@@ -42,21 +42,22 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 async function analyzeFinancialStatements(data) {
     try {
         const financialData = data.map(item => {
-            return `${item.account_nm}: Current: ${item.thstrm_amount}, Previous: ${item.frmtrm_amount}, Before: ${item.bfefrmtrm_amount}`;
+            return `${item.account_nm}: 당기 ${item.thstrm_amount}원, 전기 ${item.frmtrm_amount}원, 전전기 ${item.bfefrmtrm_amount}원`;
         }).join('\n');
 
-        const prompt = `Analyze the following financial statement data and provide comprehensive analysis:
+        const prompt = `다음은 기업의 재무제표 데이터입니다. 이를 분석하여 한국어로 종합적인 분석을 해주세요:
 
 ${financialData}
 
-Please analyze:
-1. Overall company performance
-2. Financial position changes
-3. Key financial ratios
-4. Notable changes
-5. Future outlook
+분석 포인트:
+1. 전반적인 기업 실적 (매출, 이익 등의 증감률과 트렌드)
+2. 재무상태 (자산, 부채, 자본의 변화와 건전성)
+3. 주요 재무비율 분석 (수익성, 안정성, 성장성 지표)
+4. 특이사항이나 주목할 만한 변화점
+5. 향후 전망과 투자 시사점
 
-Explain in simple terms for general investors.`;
+전문가가 일반 투자자에게 설명하듯이 쉽고 명확하게 한국어로 설명해주세요. 
+구체적인 수치와 비율을 포함하여 분석해주시고, 긍정적인 부분과 우려사항을 균형있게 제시해주세요.`;
 
         const model = genAI.getGenerativeModel({ 
             model: "gemini-1.5-flash",
@@ -74,7 +75,7 @@ Explain in simple terms for general investors.`;
 
     } catch (error) {
         console.error('Gemini API Error:', error);
-        throw new Error('Financial analysis error occurred.');
+        throw new Error('재무제표 분석 중 오류가 발생했습니다.');
     }
 }
 
