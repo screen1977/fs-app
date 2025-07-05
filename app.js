@@ -126,7 +126,7 @@ app.get('/api/financial-statements', async (req, res) => {
         corp_code,
         bsns_year,
         reprt_code,
-        fs_div: 'CFS'  // 연결재무제표 우선 조회
+        fs_div: 'CFS'
       }
     });
 
@@ -136,12 +136,11 @@ app.get('/api/financial-statements', async (req, res) => {
     
     // 상태 코드별 처리
     switch(response.data.status) {
-      case '000': // 정상
+      case '000':
         res.json(response.data);
         break;
       
-      case '013': // 조회된 데이터 없음
-        // 연결재무제표가 없는 경우 일반재무제표 조회 시도
+      case '013':
         try {
           const retryResponse = await axios.get('https://opendart.fss.or.kr/api/fnlttSinglAcnt.json', {
             params: {
@@ -149,14 +148,13 @@ app.get('/api/financial-statements', async (req, res) => {
               corp_code,
               bsns_year,
               reprt_code,
-              fs_div: 'OFS'  // 일반재무제표 조회
+              fs_div: 'OFS'
             }
           });
           
           if (retryResponse.data.status === '000') {
             res.json(retryResponse.data);
           } else {
-            // 보고서 종류별 메시지
             let reportType;
             switch(reprt_code) {
               case '11013': reportType = '1분기보고서(5월 중순 제출)'; break;
@@ -180,28 +178,28 @@ app.get('/api/financial-statements', async (req, res) => {
         }
         break;
       
-      case '010': // 등록되지 않은 키
+      case '010':
         res.json({
           status: '010',
           message: 'API 키가 유효하지 않습니다. 관리자에게 문의하세요.'
         });
         break;
       
-      case '011': // 사용할 수 없는 키
+      case '011':
         res.json({
           status: '011',
           message: 'API 키가 만료되었습니다. 관리자에게 문의하세요.'
         });
         break;
       
-      case '020': // 요청 제한 초과
+      case '020':
         res.json({
           status: '020',
           message: '일일 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.'
         });
         break;
       
-      case '100': // 잘못된 파라미터
+      case '100':
         res.json({
           status: '100',
           message: '요청 정보가 올바르지 않습니다. 입력 값을 확인해주세요.'
