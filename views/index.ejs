@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>재무제표 조회 시스템</title>
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <style>
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        .financial-summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .ratio-card {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .ratio-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">재무제표 조회 시스템</h1>
+        
+        <!-- 검색 폼 -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="회사명을 입력하세요">
+                    <button class="btn btn-primary" type="button" id="searchButton">검색</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 검색 결과 -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div id="searchResults" class="list-group"></div>
+            </div>
+        </div>
+
+        <!-- 재무제표 조회 옵션 -->
+        <div class="row mb-4" id="optionsContainer" style="display: none;">
+            <div class="col-md-3">
+                <select class="form-select" id="yearSelect">
+                    <option value="">사업연도 선택</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="reportSelect">
+                    <option value="">보고서 선택</option>
+                    <option value="11011">사업보고서 (3월말 제출)</option>
+                    <option value="11012">반기보고서 (8월 중순)</option>
+                    <option value="11013">1분기보고서 (5월 중순)</option>
+                    <option value="11014">3분기보고서 (11월 중순)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary" id="fetchButton">조회</button>
+            </div>
+        </div>
+
+        <!-- 재무제표 요약 -->
+        <div class="row mb-4" id="financialSummary" style="display: none;">
+            <div class="col-12">
+                <div class="financial-summary">
+                    <h3 class="company-name mb-3"></h3>
+                    
+                    <!-- AI 분석 결과 -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4>AI 재무분석</h4>
+                            <button class="btn btn-primary btn-sm" id="analyzeButton">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                재분석
+                            </button>
+                        </div>
+                        <div class="analysis-content mt-3 p-3 bg-light rounded">
+                            <div id="analysisResult" style="white-space: pre-line;">분석 버튼을 클릭하여 AI 분석 결과를 확인하세요.</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="ratio-card">
+                                <h5>주요 재무비율</h5>
+                                <div class="chart-container" style="height: 300px;">
+                                    <canvas id="ratioChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="ratio-card">
+                                <h5>재무비율 상세</h5>
+                                <div class="ratio-item">
+                                    <span>영업이익률: </span>
+                                    <span class="ratio-value" id="operatingMargin">-</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span>순이익률: </span>
+                                    <span class="ratio-value" id="netMargin">-</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span>부채비율: </span>
+                                    <span class="ratio-value" id="debtRatio">-</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span>유동비율: </span>
+                                    <span class="ratio-value" id="currentRatio">-</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span>매출액증가율: </span>
+                                    <span class="ratio-value" id="salesGrowth">-</span>
+                                </div>
+                                <div class="ratio-item">
+                                    <span>영업이익증가율: </span>
+                                    <span class="ratio-value" id="operatingIncomeGrowth">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 재무상태표 차트 -->
+        <div class="row">
+            <div class="col-md-6">
+                <h4>재무상태</h4>
+                <div class="chart-container">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h4>손익현황</h4>
+                <div class="chart-container">
+                    <canvas id="incomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 재무제표 데이터 테이블 -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="financialTable">
+                        <thead>
+                            <tr>
+                                <th>계정과목</th>
+                                <th>당기</th>
+                                <th>전기</th>
+                                <th>전전기</th>
+                                <th>증감률</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script src="/chart.js/chart.umd.js"></script>
+    <script>
+        let selectedCompany = null;
+        let balanceChart = null;
+        let incomeChart = null;
+        let ratioChart = null;
+        let lastQueryParams = null;  // 마지막 조회 파라미터 저장
+
+        // 현재 연도 기준으로 최근 5년간 선택 옵션 생성
+        const yearSelect = document.getElementById('yearSelect');
+        const currentYear = new Date().getFullYear();
+        for (let i = 0; i < 5; i++) {
+            const year = currentYear - i;
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            yearSelect.appendChild(option);
+        }
+
+        // 회사 검색
+        document.getElementById('searchInput').addEventListener('input', async (e) => {
+            const searchTerm = e.target.value;
+            if (searchTerm.length < 2) return;
+
+            try {
+                const response = await fetch(`/api/search?term=${encodeURIComponent(searchTerm)}`);
+                const companies = await response.json();
+                
+                const resultsDiv = document.getElementById('searchResults');
+                resultsDiv.innerHTML = '';
+                
+                companies.forEach(company => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action';
+                    a.textContent = `${company.corp_name} (${company.stock_code || '비상장'})`;
+                    a.onclick = (e) => {
+                        e.preventDefault();
+                        selectedCompany = company;
+                        document.getElementById('searchInput').value = company.corp_name;
+                        resultsDiv.innerHTML = '';
+                        document.getElementById('optionsContainer').style.display = 'flex';
+                    };
+                    resultsDiv.appendChild(a);
+                });
+            } catch (error) {
+                console.error('검색 오류:', error);
+            }
+        });
+
+        // 재무제표 조회
+        document.getElementById('fetchButton').addEventListener('click', async () => {
+            if (!selectedCompany) return;
+
+            const year = document.getElementById('yearSelect').value;
+            const reportCode = document.getElementById('reportSelect').value;
+            
+            if (!year || !reportCode) {
+                alert('사업연도와 보고서를 선택해주세요.');
+                return;
+            }
+
+            // 조회 파라미터 저장
+            lastQueryParams = {
+                corp_code: selectedCompany.corp_code,
+                bsns_year: year,
+                reprt_code: reportCode
+            };
+
+            try {
+                const response = await fetch(`/api/financial-statements?corp_code=${selectedCompany.corp_code}&bsns_year=${year}&reprt_code=${reportCode}`);
+                const data = await response.json();
+
+                if (data.status === '000') {
+                    document.getElementById('financialSummary').style.display = 'block';
+                    document.querySelector('.company-name').textContent = selectedCompany.corp_name;
+                    updateCharts(data.list);
+                    updateTable(data.list);
+                    updateRatios(data.list);
+                    
+                    // 자동으로 AI 분석 실행
+                    analyzeFinancialStatements();
+                } else {
+                    // 사용자 친화적인 오류 메시지 표시
+                    const errorMessage = data.message || '재무제표 조회 중 오류가 발생했습니다.';
+                    alert(errorMessage);
+                    
+                    // 데이터가 없는 경우 차트와 테이블 초기화
+                    document.getElementById('financialSummary').style.display = 'none';
+                    if (balanceChart) balanceChart.destroy();
+                    if (incomeChart) incomeChart.destroy();
+                    if (ratioChart) ratioChart.destroy();
+                    document.querySelector('#financialTable tbody').innerHTML = '';
+                }
+            } catch (error) {
+                console.error('재무제표 조회 오류:', error);
+                alert('서버 연결 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            }
+        });
+
+        // AI 분석 실행
+        async function analyzeFinancialStatements() {
+            if (!lastQueryParams) return;
+
+            const analyzeButton = document.getElementById('analyzeButton');
+            const spinner = analyzeButton.querySelector('.spinner-border');
+            const analysisResult = document.getElementById('analysisResult');
+
+            try {
+                // 버튼 비활성화 및 로딩 표시
+                analyzeButton.disabled = true;
+                spinner.classList.remove('d-none');
+                analysisResult.innerHTML = '분석 중입니다...';
+
+                const response = await fetch(`/api/analyze-financial-statements?corp_code=${lastQueryParams.corp_code}&bsns_year=${lastQueryParams.bsns_year}&reprt_code=${lastQueryParams.reprt_code}`);
+                const data = await response.json();
+
+                if (data.status === '000') {
+                    // 마크다운을 HTML로 변환하여 표시
+                    analysisResult.innerHTML = data.analysis;
+                } else {
+                    analysisResult.innerHTML = data.message || '분석 중 오류가 발생했습니다.';
+                }
+            } catch (error) {
+                console.error('재무제표 분석 오류:', error);
+                analysisResult.innerHTML = '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+            } finally {
+                // 버튼 활성화 및 로딩 제거
+                analyzeButton.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        }
+
+        // 재분석 버튼 이벤트 리스너
+        document.getElementById('analyzeButton').addEventListener('click', analyzeFinancialStatements);
+
+        // 차트 업데이트
+        function updateCharts(data) {
+            updateBalanceChart(data);
+            updateIncomeChart(data);
+        }
+
+        // 재무상태표 차트 업데이트
+        function updateBalanceChart(data) {
+            const bsAccounts = data.filter(item => 
+                item.fs_div === 'CFS' && 
+                item.sj_div === 'BS' && 
+                ['자산총계', '부채총계', '자본총계'].includes(item.account_nm)
+            );
+
+            const year = document.getElementById('yearSelect').value;
+            const labels = [`${year}년`, `${year-1}년`, `${year-2}년`];
+            const datasets = bsAccounts.map(account => ({
+                label: account.account_nm,
+                data: [
+                    parseFloat((parseInt(account.thstrm_amount.replace(/,/g, '')) / 1000000000000).toFixed(2)),
+                    parseFloat((parseInt(account.frmtrm_amount.replace(/,/g, '')) / 1000000000000).toFixed(2)),
+                    parseFloat((parseInt(account.bfefrmtrm_amount.replace(/,/g, '')) / 1000000000000).toFixed(2))
+                ],
+                borderWidth: 1
+            }));
+
+            if (balanceChart) {
+                balanceChart.destroy();
+            }
+
+            const ctx = document.getElementById('balanceChart').getContext('2d');
+            balanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '조원'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '재무상태표 추이'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 손익계산서 차트 업데이트
+        function updateIncomeChart(data) {
+            const plAccounts = data.filter(item => 
+                item.fs_div === 'CFS' && 
+                item.sj_div === 'IS' && 
+                ['매출액', '영업이익', '당기순이익'].includes(item.account_nm)
+            );
+
+            const year = document.getElementById('yearSelect').value;
+            const labels = [`${year}년`, `${year-1}년`, `${year-2}년`];
+            const datasets = plAccounts.map(account => ({
+                label: account.account_nm,
+                data: [
+                    parseFloat((parseInt(account.thstrm_amount.replace(/,/g, '')) / 1000000000000).toFixed(2)),
+                    parseFloat((parseInt(account.frmtrm_amount.replace(/,/g, '')) / 1000000000000).toFixed(2)),
+                    parseFloat((parseInt(account.bfefrmtrm_amount.replace(/,/g, '')) / 1000000000000).toFixed(2))
+                ],
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            }));
+
+            if (incomeChart) {
+                incomeChart.destroy();
+            }
+
+            const ctx = document.getElementById('incomeChart').getContext('2d');
+            incomeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '조원'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '손익계산서 추이'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 재무비율 차트 업데이트
+        function updateRatioChart(ratios) {
+            if (ratioChart) {
+                ratioChart.destroy();
+            }
+
+            const ctx = document.getElementById('ratioChart').getContext('2d');
+            ratioChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        '영업이익률',
+                        '순이익률',
+                        '부채비율',
+                        '유동비율',
+                        '매출액증가율',
+                        '영업이익증가율'
+                    ],
+                    datasets: [{
+                        label: '재무비율',
+                        data: [
+                            parseFloat(ratios.operatingMargin),
+                            parseFloat(ratios.netMargin),
+                            parseFloat(ratios.debtRatio),
+                            parseFloat(ratios.currentRatio),
+                            parseFloat(ratios.salesGrowth),
+                            parseFloat(ratios.operatingIncomeGrowth)
+                        ],
+                        fill: true,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        pointBackgroundColor: 'rgb(54, 162, 235)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(54, 162, 235)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 200
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '재무비율 분석'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 재무비율 업데이트
+        function updateRatios(data) {
+            const getCurrentValue = (accounts, accountName) => {
+                const account = accounts.find(item => item.account_nm === accountName);
+                return account ? parseInt(account.thstrm_amount.replace(/,/g, '')) : 0;
+            };
+
+            const getPreviousValue = (accounts, accountName) => {
+                const account = accounts.find(item => item.account_nm === accountName);
+                return account ? parseInt(account.frmtrm_amount.replace(/,/g, '')) : 0;
+            };
+
+            // 수익성 비율
+            const revenue = getCurrentValue(data, '매출액');
+            const operatingIncome = getCurrentValue(data, '영업이익');
+            const netIncome = getCurrentValue(data, '당기순이익');
+
+            const operatingMargin = (operatingIncome / revenue * 100).toFixed(2);
+            const netMargin = (netIncome / revenue * 100).toFixed(2);
+
+            // 안정성 비율
+            const totalAssets = getCurrentValue(data, '자산총계');
+            const totalLiabilities = getCurrentValue(data, '부채총계');
+            const currentAssets = getCurrentValue(data, '유동자산');
+            const currentLiabilities = getCurrentValue(data, '유동부채');
+
+            const debtRatio = (totalLiabilities / (totalAssets - totalLiabilities) * 100).toFixed(2);
+            const currentRatio = (currentAssets / currentLiabilities * 100).toFixed(2);
+
+            // 성장성 비율
+            const prevRevenue = getPreviousValue(data, '매출액');
+            const prevOperatingIncome = getPreviousValue(data, '영업이익');
+
+            const salesGrowth = ((revenue - prevRevenue) / prevRevenue * 100).toFixed(2);
+            const operatingIncomeGrowth = ((operatingIncome - prevOperatingIncome) / prevOperatingIncome * 100).toFixed(2);
+
+            // 화면 업데이트
+            document.getElementById('operatingMargin').textContent = `${operatingMargin}%`;
+            document.getElementById('netMargin').textContent = `${netMargin}%`;
+            document.getElementById('debtRatio').textContent = `${debtRatio}%`;
+            document.getElementById('currentRatio').textContent = `${currentRatio}%`;
+            document.getElementById('salesGrowth').textContent = `${salesGrowth}%`;
+            document.getElementById('operatingIncomeGrowth').textContent = `${operatingIncomeGrowth}%`;
+
+            // 방사형 차트 업데이트
+            updateRatioChart({
+                operatingMargin,
+                netMargin,
+                debtRatio,
+                currentRatio,
+                salesGrowth,
+                operatingIncomeGrowth
+            });
+        }
+
+        // 테이블 업데이트
+        function updateTable(data) {
+            const tableBody = document.querySelector('#financialTable tbody');
+            tableBody.innerHTML = '';
+
+            const year = document.getElementById('yearSelect').value;
+            const mainAccounts = [
+                '매출액', '영업이익', '당기순이익',
+                '자산총계', '부채총계', '자본총계',
+                '유동자산', '유동부채'
+            ];
+
+            data.filter(item => 
+                item.fs_div === 'CFS' && 
+                mainAccounts.includes(item.account_nm)
+            ).forEach(item => {
+                const thstrmAmount = parseInt(item.thstrm_amount.replace(/,/g, ''));
+                const frmtrmAmount = parseInt(item.frmtrm_amount.replace(/,/g, ''));
+                const growthRate = ((thstrmAmount - frmtrmAmount) / frmtrmAmount * 100).toFixed(2);
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.account_nm}</td>
+                    <td>${formatAmount(item.thstrm_amount)} (${year}년)</td>
+                    <td>${formatAmount(item.frmtrm_amount)} (${year-1}년)</td>
+                    <td>${formatAmount(item.bfefrmtrm_amount)} (${year-2}년)</td>
+                    <td class="${growthRate > 0 ? 'text-success' : 'text-danger'}">${growthRate}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 금액 포맷팅 (단위: 조원)
+        function formatAmount(amount) {
+            if (!amount) return '-';
+            const num = parseInt(amount.replace(/,/g, ''));
+            return (num / 1000000000000).toFixed(2) + ' 조원';
+        }
+    </script>
+</body>
+</html> 
